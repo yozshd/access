@@ -1,0 +1,75 @@
+---
+title: Base Markdown
+description: CommonMark syntax available in every MDX doc — headings, emphasis, links, blockquotes, lists, code, rules, and images.
+---
+
+# Base Markdown
+
+Every doc page is MDX. These examples use **standard CommonMark** — they render whether or not `gfm` is enabled in `astro.config.mjs`.
+
+For tables, task lists, strikethrough, autolinks, and footnotes, see [GFM extensions](/docs/notes/gfm-syntax).
+
+## Headings
+
+### Third-level heading
+
+Use one to six `#` characters at the start of a line.
+
+## Emphasis
+
+**Bold**, *italic*, and ***bold italic***.
+
+## Links
+
+[Internal link](/docs/about) and [external link](https://example.com).
+
+Without GFM, bare URLs stay plain text — compare with the [autolink section](/docs/notes/gfm-syntax#autolink-literals) on the GFM page.
+
+## Blockquotes
+
+> Quoted text. Blockquotes can wrap multiple lines
+> when each line starts with `>`.
+
+## Lists
+
+Unordered:
+
+- First item
+- Second item
+  - Nested item
+
+Ordered:
+
+1. Step one
+2. Step two
+
+## Code
+
+Inline: call `getUserProfile()` before rendering.
+
+Fenced block:
+
+```ts
+type UserProfile = {
+  id: string;
+  name: string;
+  role: "admin" | "editor" | "viewer";
+};
+
+export function canEdit(profile: UserProfile): boolean {
+  return profile.role === "admin" || profile.role === "editor";
+}
+```
+
+Shell:
+
+```sh
+vp install
+vp dev
+```
+
+## Horizontal rule
+
+---
+
+Content below a thematic break.

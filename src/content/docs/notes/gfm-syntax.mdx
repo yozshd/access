@@ -1,0 +1,52 @@
+---
+title: GFM Extensions
+description: GitHub Flavored Markdown enabled by gfm in astro.config.mjs — strikethrough, tables, task lists, autolinks, and footnotes.
+---
+
+# GFM Extensions
+
+These features come from [GitHub Flavored Markdown](https://github.github.com/gfm/) and require `gfm: true` in Astro's markdown config:
+
+```js
+// astro.config.mjs
+markdown: {
+  gfm: true,
+},
+```
+
+Headings, lists, blockquotes, and code blocks are covered on [Base Markdown](/docs/notes/typography-examples).
+
+## Strikethrough
+
+~~Outdated or removed text.~~
+
+Syntax: `~~strikethrough~~`
+
+## Tables
+
+| Region | Role |
+| ------ | ---- |
+| dev    | local workstation |
+| edge   | Cloudflare worker |
+
+## Task lists
+
+- [x] Document base Markdown syntax
+- [ ] Preview GFM rendering in dev
+
+Syntax: `- [x]` done, `- [ ]` open.
+
+## Autolink literals
+
+https://github.com
+
+www.github.com
+
+No brackets needed — GFM turns bare URLs into links.
+
+## Footnotes
+
+Sentence with a footnote reference.[^demo]
+
+[^demo]: Footnote body. Two trailing spaces at the end of a line start a new line inside the footnote.  
+  Second line of the footnote.

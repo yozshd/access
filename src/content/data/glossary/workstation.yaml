@@ -1,0 +1,3 @@
+term: Workstation
+short: Contributor's primary local machine—laptop or desktop with credentials, git auth, and IDE; not necessarily bare metal.
+seeAlso: [workspace, thin-client, egress]

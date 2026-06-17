@@ -1,0 +1,62 @@
+---
+import { docFilename } from "../lib/doc-entry";
+
+interface Crumb {
+	label: string;
+	href?: string;
+}
+
+interface Props {
+	/** Collection entry id (e.g. `notes/gfm-syntax`, `readme`). */
+	docSlug?: string;
+	rootLabel?: string;
+	/** Site home with the content tree. */
+	rootHref?: string;
+	crumbs?: Crumb[];
+}
+
+const {
+	docSlug,
+	rootLabel = "@yozshd/access",
+	rootHref = "/",
+	crumbs = [],
+} = Astro.props;
+
+const items: Crumb[] =
+	crumbs.length > 0
+		? crumbs
+		: docSlug
+			? [
+					{ label: rootLabel, href: rootHref },
+					{ label: docFilename(docSlug) },
+				]
+			: [{ label: rootLabel, href: rootHref }];
+---
+
+<nav aria-label="Breadcrumb" class="mb-6 font-mono text-sm">
+	<ol role="list" class="flex flex-wrap items-center gap-x-2 gap-y-1">
+		{
+			items.map((item, index) => (
+				<li class="flex items-center gap-x-2">
+					{index > 0 && (
+						<span class="text-gray-400" aria-hidden="true">
+							/
+						</span>
+					)}
+					{item.href ? (
+						<a
+							href={item.href}
+							class="text-indigo-600 hover:text-indigo-500 hover:underline"
+						>
+							{item.label}
+						</a>
+					) : (
+						<span aria-current="page" class="text-gray-800">
+							{item.label}
+						</span>
+					)}
+				</li>
+			))
+		}
+	</ol>
+</nav>

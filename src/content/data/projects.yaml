@@ -1,0 +1,15 @@
+ace:
+  project: access
+  codename: prj:ace
+
+bea:
+  project: budget
+  codename: prj:bea
+
+cru:
+  project: ""
+  codename: prj:cru
+
+dab:
+  project: ""
+  codename: prj:dab

@@ -1,0 +1,21 @@
+---
+import { frontmatterYamlBlock } from "../lib/frontmatter";
+
+interface Props {
+	data: Record<string, unknown>;
+}
+
+const { data } = Astro.props;
+const yamlBlock = frontmatterYamlBlock(data);
+---
+
+{
+	yamlBlock && (
+		<div
+			class="frontmatter prose prose-gray max-w-none"
+			aria-label="Frontmatter"
+		>
+			<pre><code>{yamlBlock}</code></pre>
+		</div>
+	)
+}

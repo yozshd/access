@@ -1,0 +1,36 @@
+---
+import "../styles/docs.css";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import Frontmatter from "../components/Frontmatter.astro";
+
+interface Props {
+	title: string;
+	description?: string;
+	docSlug?: string;
+	frontmatter?: Record<string, unknown>;
+}
+
+const { title, description, docSlug, frontmatter = {} } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		{description && <meta name="description" content={description} />}
+	</head>
+	<body class="min-h-screen bg-white font-sans text-gray-900 antialiased">
+		<main class="doc-shell">
+			<Breadcrumbs docSlug={docSlug} />
+			<Frontmatter data={frontmatter} />
+			<article class="prose prose-gray max-w-none mt-8">
+				<slot />
+			</article>
+		</main>
+	</body>
+</html>

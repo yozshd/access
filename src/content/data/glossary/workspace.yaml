@@ -1,0 +1,4 @@
+term: Workspace
+short: Development environment where builds and deploy commands often run—container, remote VM, or shared build host.
+aliases: [dev workspace, dev server]
+seeAlso: [workstation, egress, fingerprint]

@@ -1,0 +1,22 @@
+---
+interface Props {
+	prefix: string;
+	label: string;
+	href?: string;
+}
+
+const { prefix, label, href } = Astro.props;
+---
+
+<div class="flex leading-6">
+	<span class="shrink-0 select-none text-gray-400" aria-hidden="true">{prefix}</span>
+	{
+		href ? (
+			<a href={href} class="text-indigo-600 hover:text-indigo-500 hover:underline">
+				{label}
+			</a>
+		) : (
+			<span class="text-gray-700">{label}</span>
+		)
+	}
+</div>
