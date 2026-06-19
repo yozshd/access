@@ -7,6 +7,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
+	site: process.env.ASTRO_SITE,
+	base: process.env.ASTRO_BASE,
 	integrations: [mdx()],
 	markdown: {
 		// Plain fenced blocks (GitHub-style), not Shiki token spans.
