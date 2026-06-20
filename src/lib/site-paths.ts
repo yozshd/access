@@ -1,13 +1,32 @@
 /**
  * Path helpers for access.github.io.
  *
- * Routing contract (paired with `trailingSlash: "never"`):
+ * Paired with `trailingSlash: "never"` in astro.config.mjs.
  *
- * - **Page URL:** `{base}{entry.id}` — e.g. `/about`, `/notes/gfm-syntax`, `/readme`
+ * ## Docs library (`src/content/docs/**`)
+ *
+ * - **Page URL:** `{base}{route slug}` — e.g. `/about`, `/notes/gfm-syntax`
  * - **Directory listing:** `{base}{dirPath}` — e.g. `/notes`
- * - **Astro route param:** `{entry.id}` via {@link routeSlugForDocId}
  *
- * Docs use extensionless URLs. Repo-root README uses `/readme`; the tree shows {@link README_TREE_LABEL}.
+ * ## README exception
+ *
+ * Repo-root `README.md` → `/readme` (tree label {@link README_TREE_LABEL}).
+ *
+ * ## Index doc exception
+ *
+ * `README.md` at the project root is not under `content/docs`. It keeps the source
+ * `.md` extension in the pretty-printed URL instead of the `.mdx` convention above:
+ *
+ * - **Page URL:** `{base}README.md` — e.g. `/access/README.md`
+ * - **Astro route param:** `README.md`
+ * - **Collection entry id:** `readme` ({@link README_DOC_ID})
+ * - **Tree label:** `README.md` (see `docFilename` in doc-entry.ts)
+ *
+ * No content transformation — only the URL segment differs from the docs library rule.
+ * 
+ * `{base}` is the ContentList home (`index.html`). Static hosts also map `{base}index`
+ * to that file, so `index.mdx` cannot use `/index`. It routes to {@link INDEX_ROUTE_SLUG}
+ * while the tree label stays `index.mdx`.
  */
 
 /** `readme` collection entry id (repo-root README.md). */
@@ -18,6 +37,12 @@ export const README_ROUTE_SLUG = "readme";
 
 /** Tree/breadcrumb label for repo-root README (filename at repo root). */
 export const README_TREE_LABEL = "README.md";
+
+/** Docs collection entry id for `src/content/docs/index.mdx`. */
+export const INDEX_DOC_ID = "index";
+
+/** Public URL segment for the index doc (not `index` — clashes with home `index.html`). */
+export const INDEX_ROUTE_SLUG = "entry";
 
 /** Root-relative page path for a collection entry id (no `base` prefix). */
 export function docPathForEntryId(entryId: string): string {
@@ -50,6 +75,9 @@ export function dirListingHref(dirPath: string): string {
 
 /** Astro `[...slug]` param for a routable entry id. */
 export function routeSlugForDocId(entryId: string): string {
+	if (entryId === INDEX_DOC_ID) {
+		return INDEX_ROUTE_SLUG;
+	}
 	return entryId;
 }
 
@@ -57,6 +85,9 @@ export function routeSlugForDocId(entryId: string): string {
 export function docIdFromRouteSlug(routeSlug: string): string | undefined {
 	if (routeSlug === README_ROUTE_SLUG) {
 		return README_COLLECTION_ID;
+	}
+	if (routeSlug === INDEX_ROUTE_SLUG) {
+		return INDEX_DOC_ID;
 	}
 	if (routeSlug.includes(".")) {
 		return undefined;
@@ -84,8 +115,17 @@ export function normalizeLegacyDocPath(path: string): string {
 		normalized === "/README.mdx"
 	) {
 		normalized = `/${README_ROUTE_SLUG}`;
+	} else if (
+		normalized === "/index" ||
+		normalized === "/index/" ||
+		normalized === "/index.mdx"
+	) {
+		normalized = `/${INDEX_ROUTE_SLUG}`;
 	} else if (normalized.endsWith(".mdx")) {
 		normalized = normalized.slice(0, -".mdx".length);
+		if (normalized === "/index") {
+			normalized = `/${INDEX_ROUTE_SLUG}`;
+		}
 	} else if (normalized.endsWith(".md")) {
 		normalized = normalized.slice(0, -".md".length);
 	}
