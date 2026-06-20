@@ -2,6 +2,7 @@
 import "../styles/docs.css";
 import Breadcrumbs from "../components/Breadcrumbs.astro";
 import Frontmatter from "../components/Frontmatter.astro";
+import { sitePath } from "../lib/site-paths";
 
 interface Props {
 	title: string;
@@ -18,8 +19,8 @@ const { title, description, docSlug, frontmatter = {} } = Astro.props;
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" type="image/svg+xml" href={sitePath("favicon.svg")} />
+		<link rel="icon" href={sitePath("favicon.ico")} />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 		{description && <meta name="description" content={description} />}

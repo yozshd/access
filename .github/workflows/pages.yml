@@ -25,6 +25,7 @@ jobs:
           package-manager: npm@latest
           node-version: "22"
         env:
+          # Keep in sync with .gitlab-ci.yml validate-access-github
           ASTRO_SITE: https://yozshd.github.io
           ASTRO_BASE: /access/
 

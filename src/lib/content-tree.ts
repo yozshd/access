@@ -1,4 +1,10 @@
 import type { CollectionEntry } from "astro:content";
+import {
+	README_COLLECTION_ID,
+	README_TREE_LABEL,
+	dirListingHref,
+	docPageHref,
+} from "./site-paths";
 
 export type DocsEntry = CollectionEntry<"docs">;
 
@@ -35,6 +41,32 @@ export function buildContentTree(entries: DocsEntry[]): ContentTreeNode {
 
 	sortTree(root);
 	return root;
+}
+
+export function findNodeAtPath(
+	root: ContentTreeNode,
+	dirPath: string,
+): ContentTreeNode | undefined {
+	if (!dirPath) return root;
+	let node = root;
+	for (const segment of dirPath.split("/")) {
+		const child = node.children.find((item) => item.name === segment);
+		if (!child) return undefined;
+		node = child;
+	}
+	return node;
+}
+
+/** Paths that should get a directory listing page (any node with children). */
+export function collectDirectoryPaths(root: ContentTreeNode): string[] {
+	const paths: string[] = [];
+	for (const child of root.children) {
+		if (child.children.length > 0) {
+			paths.push(child.path);
+			paths.push(...collectDirectoryPaths(child));
+		}
+	}
+	return paths;
 }
 
 function sortNodes(nodes: ContentTreeNode[]): ContentTreeNode[] {
@@ -81,7 +113,7 @@ export function partitionRootNodes(nodes: ContentTreeNode[]): ContentTreeNode[] 
 }
 
 export function docHref(id: string): string {
-	return `/docs/${id}`;
+	return docPageHref(id);
 }
 
 export type TreeLine = {
@@ -110,8 +142,7 @@ export function flattenContentTree(
 
 	for (let i = 0; i < nodes.length; i++) {
 		const node = nodes[i]!;
-		const isLast =
-			i === nodes.length - 1 && reservedTail === 0;
+		const isLast = i === nodes.length - 1 && reservedTail === 0;
 		const connector = isLast ? "└── " : "├── ";
 		const prefix = ancestorPrefix(continues) + connector;
 
@@ -119,10 +150,12 @@ export function flattenContentTree(
 		const hasEntry = node.entry != null;
 
 		if (hasChildren && !hasEntry) {
-			lines.push({ prefix, label: `${node.name}/` });
-			lines.push(
-				...flattenContentTree(node.children, [...continues, !isLast]),
-			);
+			lines.push({
+				prefix,
+				label: `${node.name}/`,
+				href: dirListingHref(node.path),
+			});
+			lines.push(...flattenContentTree(node.children, [...continues, !isLast]));
 			continue;
 		}
 
@@ -135,9 +168,14 @@ export function flattenContentTree(
 		}
 
 		if (hasChildren) {
-			lines.push(
-				...flattenContentTree(node.children, [...continues, !isLast]),
-			);
+			if (hasEntry) {
+				lines.push({
+					prefix: ancestorPrefix([...continues, !isLast]) + "├── ",
+					label: `${node.name}/`,
+					href: dirListingHref(node.path),
+				});
+			}
+			lines.push(...flattenContentTree(node.children, [...continues, !isLast]));
 		}
 	}
 
@@ -147,13 +185,19 @@ export function flattenContentTree(
 /** Home-page tree: root files, then dirs, then README.md. */
 export function flattenContentTreeForDisplay(
 	nodes: ContentTreeNode[],
+	options: { includeReadme?: boolean } = {},
 ): TreeLine[] {
+	const { includeReadme = true } = options;
 	const ordered = partitionRootNodes(nodes);
-	const lines = flattenContentTree(ordered, [], { reservedTail: 1 });
-	lines.push({
-		prefix: `${ancestorPrefix([])}└── `,
-		label: "README.md",
-		href: docHref("readme"),
-	});
+	const lines = flattenContentTree(ordered, [], { reservedTail: includeReadme ? 1 : 0 });
+
+	if (includeReadme) {
+		lines.push({
+			prefix: `${ancestorPrefix([])}└── `,
+			label: README_TREE_LABEL,
+			href: docPageHref(README_COLLECTION_ID),
+		});
+	}
+
 	return lines;
 }

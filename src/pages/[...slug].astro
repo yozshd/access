@@ -1,0 +1,79 @@
+---
+export const prerender = true;
+
+import { getCollection, render } from "astro:content";
+import Docs from "../layouts/Docs.astro";
+import Directory from "../layouts/Directory.astro";
+import {
+	buildContentTree,
+	collectDirectoryPaths,
+	findNodeAtPath,
+} from "../lib/content-tree";
+import { docPageTitle, getDocEntry, type DocEntry } from "../lib/doc-entry";
+import { README_COLLECTION_ID, routeSlugForDocId } from "../lib/site-paths";
+
+type PageProps =
+	| { pageType: "doc"; docId: string }
+	| { pageType: "directory"; dirPath: string };
+
+export async function getStaticPaths() {
+	const [docs, readme] = await Promise.all([
+		getCollection("docs"),
+		getCollection("readme"),
+	]);
+
+	const tree = buildContentTree(docs);
+	const docPaths = [...docs, ...readme].map((entry) => {
+		const docId = entry.collection === "readme" ? README_COLLECTION_ID : entry.id;
+		return {
+			params: { slug: routeSlugForDocId(docId) },
+			props: { pageType: "doc", docId } satisfies PageProps,
+		};
+	});
+
+	const directoryPaths = collectDirectoryPaths(tree).map((dirPath) => ({
+		params: { slug: dirPath },
+		props: { pageType: "directory", dirPath } satisfies PageProps,
+	}));
+
+	return [...docPaths, ...directoryPaths];
+}
+
+const props = Astro.props as PageProps;
+
+let directoryDirPath: string | undefined;
+let docEntry: DocEntry | undefined;
+let DocContent: Awaited<ReturnType<typeof render>>["Content"] | undefined;
+
+if (props.pageType === "directory") {
+	const docs = await getCollection("docs");
+	const tree = buildContentTree(docs);
+	const node = findNodeAtPath(tree, props.dirPath);
+	if (!node) {
+		return new Response(null, { status: 404, statusText: "Not Found" });
+	}
+	directoryDirPath = props.dirPath;
+} else {
+	docEntry = await getDocEntry(props.docId);
+	if (!docEntry) {
+		return new Response(null, { status: 404, statusText: "Not Found" });
+	}
+	const rendered = await render(docEntry);
+	DocContent = rendered.Content;
+}
+---
+
+{
+	directoryDirPath ? (
+		<Directory dirPath={directoryDirPath} />
+	) : docEntry && DocContent ? (
+		<Docs
+			title={docPageTitle(docEntry)}
+			description={docEntry.data.description}
+			docSlug={props.pageType === "doc" ? props.docId : undefined}
+			frontmatter={docEntry.data}
+		>
+			<DocContent />
+		</Docs>
+	) : null
+}

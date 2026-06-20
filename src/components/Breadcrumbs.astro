@@ -1,4 +1,5 @@
 ---
+import { dirListingHref, sitePath } from "../lib/site-paths";
 import { docFilename } from "../lib/doc-entry";
 
 interface Crumb {
@@ -18,18 +19,34 @@ interface Props {
 const {
 	docSlug,
 	rootLabel = "@yozshd/access",
-	rootHref = "/",
+	rootHref = sitePath(""),
 	crumbs = [],
 } = Astro.props;
+
+function crumbsForDocSlug(slug: string): Crumb[] {
+	const segments = slug.split("/");
+	const items: Crumb[] = [{ label: rootLabel, href: rootHref }];
+
+	for (let i = 0; i < segments.length - 1; i += 1) {
+		const dirPath = segments.slice(0, i + 1).join("/");
+		items.push({
+			label: `${segments[i]}`,
+			href: dirListingHref(dirPath),
+		});
+	}
+
+	items.push({
+		label: docFilename(slug),
+	});
+
+	return items;
+}
 
 const items: Crumb[] =
 	crumbs.length > 0
 		? crumbs
 		: docSlug
-			? [
-					{ label: rootLabel, href: rootHref },
-					{ label: docFilename(docSlug) },
-				]
+			? crumbsForDocSlug(docSlug)
 			: [{ label: rootLabel, href: rootHref }];
 ---
 

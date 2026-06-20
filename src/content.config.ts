@@ -2,6 +2,7 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+/** Filesystem root for the glob loader — not Astro `site` / `base` (see astro.config.mjs). */
 const docs = defineCollection({
 	loader: glob({ base: "./src/content/docs", pattern: "**/*.{md,mdx}" }),
 	schema: z.looseObject({
@@ -11,7 +12,7 @@ const docs = defineCollection({
 	}),
 });
 
-/** Repo-root README.md — id `readme` → `/docs/readme`. Not under `src/content/`. */
+/** Repo-root README.md — collection id `readme` → `/README.md`. See site-paths.ts. */
 const readme = defineCollection({
 	loader: glob({
 		base: ".",

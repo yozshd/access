@@ -1,0 +1,25 @@
+---
+import Layout from "./Layout.astro";
+import ContentList from "../components/ContentList.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import { dirListingHref, sitePath } from "../lib/site-paths";
+
+interface Props {
+	dirPath: string;
+}
+
+const { dirPath } = Astro.props;
+const dirLabel = `${dirPath.split("/").pop()}`;
+---
+
+<Layout title={`${dirLabel} — YOZSH Access`}>
+	<main class="flex min-h-dvh flex-col items-center justify-center px-4 py-12">
+		<div class="mx-auto w-full max-w-lg">
+			<ContentList
+				dirPath={dirPath}
+				headerPath={dirListingHref(dirPath)}
+				rootNavHref={sitePath("")}
+			/>
+		</div>
+	</main>
+</Layout>

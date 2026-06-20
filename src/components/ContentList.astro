@@ -1,20 +1,41 @@
 ---
 import { getCollection } from "astro:content";
-import { buildContentTree, flattenContentTreeForDisplay } from "../lib/content-tree";
+import {
+	buildContentTree,
+	findNodeAtPath,
+	flattenContentTreeForDisplay,
+	partitionRootNodes,
+} from "../lib/content-tree";
+import { sitePath } from "../lib/site-paths";
 import ContentTreeNode from "./ContentTreeNode.astro";
 
 interface Props {
+	dirPath?: string;
 	rootLabel?: string;
 	repoUrl?: string;
+	rootNavHref?: string;
+	headerPath?: string;
 }
 
 const {
+	dirPath = "",
 	rootLabel = "@yozshd/access",
 	repoUrl = "https://github.com/yozshd/access",
+	rootNavHref = repoUrl,
+	headerPath = sitePath(""),
 } = Astro.props;
 
 const entries = await getCollection("docs");
-const lines = flattenContentTreeForDisplay(buildContentTree(entries).children);
+const tree = buildContentTree(entries);
+const scopeNode = findNodeAtPath(tree, dirPath);
+const lines = scopeNode
+	? flattenContentTreeForDisplay(partitionRootNodes(scopeNode.children), {
+			includeReadme: dirPath === "",
+		})
+	: [];
+
+/** Chrome-bar URL — the path users actually browse, not the GitHub repo. */
+const headerDisplayUrl = new URL(headerPath, Astro.site ?? Astro.url).href;
 ---
 
 <nav class="w-full max-w-2xl text-left" aria-label="Documentation">
@@ -25,14 +46,14 @@ const lines = flattenContentTreeForDisplay(buildContentTree(entries).children);
 					class="flex items-center gap-2 border-b border-gray-200 bg-gray-100/80 px-4 pt-3 pb-2"
 					aria-hidden="true"
 				>
-					<span class="font-mono text-xs text-gray-500">https://github.com/yozshd/access</span>
+					<span class="font-mono text-xs text-gray-500">{headerDisplayUrl}</span>
 				</div>
 				<div class="overflow-x-auto px-4 py-4 font-mono text-sm leading-6 text-gray-800">
 					<a
-						href={repoUrl}
+						href={rootNavHref}
 						class="text-indigo-600 hover:text-indigo-500 hover:underline"
-						target="_blank"
-						rel="noopener noreferrer"
+						target={rootNavHref === repoUrl ? "_blank" : undefined}
+						rel={rootNavHref === repoUrl ? "noopener noreferrer" : undefined}
 					>
 						{rootLabel}
 					</a>
