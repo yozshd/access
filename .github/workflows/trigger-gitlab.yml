@@ -1,0 +1,41 @@
+# Workflow 2: GitHub −0.1 content → GitLab content-sync → Cloudflare ace.
+# Do not put Cloudflare API tokens in this public repo.
+#
+# Secrets (yozshd/access):
+#   GITLAB_PIPELINE_TRIGGER_TOKEN  GitLab Settings → CI/CD → Pipeline trigger tokens
+#   GITLAB_PROJECT_ID              numeric id of gitlab.com/yozsh/yozsh
+#
+# Blacksmith: later swap `runs-on` to a Blacksmith label
+# (e.g. blacksmith-4vcpu-ubuntu-2404). Keep ubuntu-latest until then.
+
+name: Trigger GitLab content deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/content/**"
+  workflow_dispatch:
+
+concurrency:
+  group: gitlab-content-deploy
+  cancel-in-progress: false
+
+jobs:
+  trigger-gitlab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger GitLab pipeline
+        env:
+          GITLAB_PIPELINE_TRIGGER_TOKEN: ${{ secrets.GITLAB_PIPELINE_TRIGGER_TOKEN }}
+          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          test -n "$GITLAB_PIPELINE_TRIGGER_TOKEN"
+          test -n "$GITLAB_PROJECT_ID"
+          curl --fail --silent --show-error --request POST \
+            --form "token=${GITLAB_PIPELINE_TRIGGER_TOKEN}" \
+            --form "ref=main" \
+            --form "variables[TRIGGER_SOURCE]=github-access-content" \
+            --form "variables[GITHUB_SHA]=${GITHUB_SHA}" \
+            "https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline"
