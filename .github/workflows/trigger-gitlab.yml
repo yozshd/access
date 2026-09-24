@@ -4,6 +4,9 @@
 # Secrets (yozshd/access):
 #   GITLAB_PIPELINE_TRIGGER_TOKEN  GitLab Settings → CI/CD → Pipeline trigger tokens
 #   GITLAB_PROJECT_ID              numeric id of gitlab.com/yozsh/yozsh
+#   STRIPE_WEBHOOK_SECRET          Signing secret for auth.yoz.sh/api/stripe/webhook.
+#     Forwarded only on a manual run. GitLab writes it with CLOUDFLARE_API_TOKEN.
+#     Do not put that Cloudflare token in this repo.
 #
 # Blacksmith: later swap `runs-on` to a Blacksmith label
 # (e.g. blacksmith-4vcpu-ubuntu-2404). Keep ubuntu-latest until then.
@@ -30,12 +33,21 @@ jobs:
           GITLAB_PIPELINE_TRIGGER_TOKEN: ${{ secrets.GITLAB_PIPELINE_TRIGGER_TOKEN }}
           GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
           GITHUB_SHA: ${{ github.sha }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           test -n "$GITLAB_PIPELINE_TRIGGER_TOKEN"
           test -n "$GITLAB_PROJECT_ID"
-          curl --fail --silent --show-error --request POST \
-            --form "token=${GITLAB_PIPELINE_TRIGGER_TOKEN}" \
-            --form "ref=main" \
-            --form "variables[TRIGGER_SOURCE]=github-access-content" \
-            --form "variables[GITHUB_SHA]=${GITHUB_SHA}" \
+          args=(
+            --fail --silent --show-error --request POST
+            --form "token=${GITLAB_PIPELINE_TRIGGER_TOKEN}"
+            --form "ref=main"
+            --form "variables[TRIGGER_SOURCE]=github-access-content"
+            --form "variables[GITHUB_SHA]=${GITHUB_SHA}"
+          )
+          # Manual run only. A content push must not put whsec_ into the pipeline.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$STRIPE_WEBHOOK_SECRET" ]; then
+            args+=(--form-string "variables[STRIPE_WEBHOOK_SECRET]=${STRIPE_WEBHOOK_SECRET}")
+          fi
+          curl "${args[@]}" \
             "https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline"
