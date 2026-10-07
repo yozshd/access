@@ -4,9 +4,14 @@
 # Secrets (yozshd/access):
 #   GITLAB_PIPELINE_TRIGGER_TOKEN  GitLab Settings → CI/CD → Pipeline trigger tokens
 #   GITLAB_PROJECT_ID              numeric id of gitlab.com/yozsh/yozsh
-#   STRIPE_WEBHOOK_SECRET          Signing secret for auth.yoz.sh/api/stripe/webhook.
-#     Forwarded only on a manual run. GitLab writes it with CLOUDFLARE_API_TOKEN.
-#     Do not put that Cloudflare token in this repo.
+#   STRIPE_WEBHOOK_SECRET          Signing secret for etc.yoz.sh/api/stripe/webhook.
+#   STRIPE_SECRET_KEY              Restricted key (rk_) for Checkout and catalog.
+#   STRIPE_THUMBS_UP_PRICE_ID      price_ or prod_ for the Thumbs up plan.
+#   STRIPE_HIGH_FIVE_PRICE_ID      price_ or prod_ for the High five plan.
+#   STRIPE_THUNDER_DAP_PRICE_ID    price_ or prod_ for the Thunder dap plan.
+#     Those five are forwarded only on a manual run, the same handoff as
+#     alanrrios/dashboard. GitLab writes each set value onto etc-yozsh with
+#     CLOUDFLARE_API_TOKEN. Do not put that Cloudflare token in this repo.
 #
 # Blacksmith: later swap `runs-on` to a Blacksmith label
 # (e.g. blacksmith-4vcpu-ubuntu-2404). Keep ubuntu-latest until then.
@@ -34,20 +39,58 @@ jobs:
           GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
           GITHUB_SHA: ${{ github.sha }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_THUMBS_UP_PRICE_ID: ${{ secrets.STRIPE_THUMBS_UP_PRICE_ID }}
+          STRIPE_HIGH_FIVE_PRICE_ID: ${{ secrets.STRIPE_HIGH_FIVE_PRICE_ID }}
+          STRIPE_THUNDER_DAP_PRICE_ID: ${{ secrets.STRIPE_THUNDER_DAP_PRICE_ID }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           test -n "$GITLAB_PIPELINE_TRIGGER_TOKEN"
           test -n "$GITLAB_PROJECT_ID"
-          args=(
-            --fail --silent --show-error --request POST
-            --form "token=${GITLAB_PIPELINE_TRIGGER_TOKEN}"
-            --form "ref=main"
-            --form "variables[TRIGGER_SOURCE]=github-access-content"
-            --form "variables[GITHUB_SHA]=${GITHUB_SHA}"
-          )
-          # Manual run only. A content push must not put whsec_ into the pipeline.
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$STRIPE_WEBHOOK_SECRET" ]; then
-            args+=(--form-string "variables[STRIPE_WEBHOOK_SECRET]=${STRIPE_WEBHOOK_SECRET}")
+          # URL-safe base64, then JSON. Same encoding as alanrrios/dashboard.
+          # A whsec_ contains "+", and GitLab's trigger path has been storing
+          # that as a space. The encoded value uses "-" and "_" instead, so
+          # the Worker receives the original bytes.
+          # A content push must not include the Stripe values.
+          b64url() {
+            printf '%s' "$1" | base64 -w0 | tr '+/' '-_' | tr -d '='
+          }
+          whsec_b64=""
+          secret_key_b64=""
+          thumbs_b64=""
+          high_five_b64=""
+          thunder_b64=""
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            [ -z "${STRIPE_WEBHOOK_SECRET:-}" ] || whsec_b64=$(b64url "$STRIPE_WEBHOOK_SECRET")
+            [ -z "${STRIPE_SECRET_KEY:-}" ] || secret_key_b64=$(b64url "$STRIPE_SECRET_KEY")
+            [ -z "${STRIPE_THUMBS_UP_PRICE_ID:-}" ] || thumbs_b64=$(b64url "$STRIPE_THUMBS_UP_PRICE_ID")
+            [ -z "${STRIPE_HIGH_FIVE_PRICE_ID:-}" ] || high_five_b64=$(b64url "$STRIPE_HIGH_FIVE_PRICE_ID")
+            [ -z "${STRIPE_THUNDER_DAP_PRICE_ID:-}" ] || thunder_b64=$(b64url "$STRIPE_THUNDER_DAP_PRICE_ID")
           fi
-          curl "${args[@]}" \
+          payload=$(jq -n \
+            --arg token "$GITLAB_PIPELINE_TRIGGER_TOKEN" \
+            --arg sha "$GITHUB_SHA" \
+            --arg whsec "$whsec_b64" \
+            --arg secret_key "$secret_key_b64" \
+            --arg thumbs "$thumbs_b64" \
+            --arg high_five "$high_five_b64" \
+            --arg thunder "$thunder_b64" \
+            '{
+              token: $token,
+              ref: "main",
+              variables: {
+                TRIGGER_SOURCE: "github-access-content",
+                GITHUB_SHA: $sha,
+                STRIPE_WEBHOOK_SECRET_B64: $whsec,
+                STRIPE_SECRET_KEY_B64: $secret_key,
+                STRIPE_THUMBS_UP_PRICE_ID_B64: $thumbs,
+                STRIPE_HIGH_FIVE_PRICE_ID_B64: $high_five,
+                STRIPE_THUNDER_DAP_PRICE_ID_B64: $thunder
+              }
+            }
+            | .variables |= with_entries(select(.value != ""))
+          ')
+          printf '%s' "$payload" | curl --fail --silent --show-error --request POST \
+            --header "Content-Type: application/json" \
+            --data-binary @- \
             "https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline"
